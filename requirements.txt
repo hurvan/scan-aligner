@@ -1,0 +1,6 @@
+confluent-kafka
+pyzmq
+ess-streaming-data-types
+scipy
+numpy
+
