@@ -18,20 +18,20 @@ def handle_f144_data(data):
     return data.source_name, data.value, data.timestamp_unix_ns
 
 
-# def handle_ev44_data(data):
-#     return data.source_name, len(data.time_of_flight), data.reference_time[0] + np.min(data.time_of_flight)
-
 def handle_ev44_data(data):
-    if len(data.time_of_flight) <= 1:
-        return data.source_name, 0, None if len(data.time_of_flight) == 0 else data.reference_time[0] + \
-                                                                               data.time_of_flight[0]
-    time_of_flight_s = data.time_of_flight / 1e9
-    min_time_s = np.min(time_of_flight_s)
-    max_time_s = np.max(time_of_flight_s)
-    time_delta_s = max_time_s - min_time_s
-    rate = len(data.time_of_flight) / time_delta_s if time_delta_s != 0 else 0
+    return data.source_name, len(data.time_of_flight), data.reference_time[0] + np.min(data.time_of_flight)
 
-    return data.source_name, rate, data.reference_time[0] + np.min(data.time_of_flight)
+# def handle_ev44_data(data):
+#     if len(data.time_of_flight) <= 1:
+#         return data.source_name, 0, None if len(data.time_of_flight) == 0 else data.reference_time[0] + \
+#                                                                                data.time_of_flight[0]
+#     time_of_flight_s = data.time_of_flight / 1e9
+#     min_time_s = np.min(time_of_flight_s)
+#     max_time_s = np.max(time_of_flight_s)
+#     time_delta_s = max_time_s - min_time_s
+#     rate = len(data.time_of_flight) / time_delta_s if time_delta_s != 0 else 0
+#
+#     return data.source_name, rate, data.reference_time[0] + np.min(data.time_of_flight)
 
 
 SCHEMA_HANDLERS = {

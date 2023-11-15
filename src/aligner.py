@@ -63,23 +63,22 @@ class Aligner:
             name, source_name, value, timestamp = data
             data_type = name.split(":")[0]
 
-            # if data_type == 'detector':
-            #     if name not in first_det_data_flags.keys():
-            #         first_det_data_flags[name] = True
-            #         continue
-
             if name not in self.data_buffer.keys():
                 self.data_buffer[name] = {}
                 self.data_buffer[name]["source_name"] = source_name
                 self.data_buffer[name]["values"] = []
                 self.data_buffer[name]["timestamps"] = []
 
-            self.data_buffer[name]["values"].append(value)
-            self.data_buffer[name]["timestamps"].append(timestamp)
+            if timestamp not in self.data_buffer[name]["timestamps"]:
+                self.data_buffer[name]["values"].append(value)
+                self.data_buffer[name]["timestamps"].append(timestamp)
 
             if data_type == "detector":
-            # if True:
-                aligned_data = self.align_data()
+                try:
+                    aligned_data = self.align_data()
+                except Exception as e:
+                    logger.error(f"Error aligning data: {e}")
+                    continue
                 if aligned_data:
                     logger.info(f"Sending aligned data: {aligned_data}")
                     self.zmq_interface.send_json(aligned_data)
@@ -101,6 +100,7 @@ class Aligner:
         try:
             final_data = interpolate_to_common_timestamps2(devices, detectors)
         except AssertionError:
+            logger.error("AssertionError interpolating data")
             return None
 
         aligned_data = {}
