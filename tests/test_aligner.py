@@ -120,11 +120,8 @@ class TestDeserialiser:
 
         final_data = zmq_spy.sent_data
 
-        expected_f144_values = np.linspace(-0.5, 8.5, 19).tolist()
-        expected_f144_values[0] = 0
-        expected_f144_values[1] = 0
-        expected_ev44_values = ([i for i in range(1, 11)] * 2)
-        expected_ev44_values.pop(0)
+        expected_f144_values = np.linspace(0, 8, 9).tolist()
+        expected_ev44_values = [i for i in range(2, 11)]
         expected_ev44_values.sort()
 
         for i, dat in enumerate(final_data):
