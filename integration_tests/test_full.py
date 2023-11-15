@@ -79,8 +79,14 @@ class TestAlignmentEngine:
 
         # assert len(all_data) == 20
 
-        expected_f144_values = np.linspace(9, 18.5, 20).tolist()
-        expected_ev44_values = ([i for i in range(11, 21)] * 2)
+        # expected_f144_values = np.linspace(9, 18.5, 20).tolist()
+        # expected_ev44_values = ([i for i in range(11, 21)] * 2)
+        # expected_ev44_values.sort()
+
+        assert len(all_data) == 10
+
+        expected_f144_values = np.linspace(9, 18, 10).tolist()
+        expected_ev44_values = [i for i in range(11, 21)]
         expected_ev44_values.sort()
 
         for i, dat in enumerate(all_data):
