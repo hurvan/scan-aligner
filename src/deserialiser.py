@@ -6,20 +6,44 @@ from typing import List
 
 import numpy as np
 from streaming_data_types import DESERIALISERS
+from streaming_data_types.eventdata_ev44 import EventData
+from streaming_data_types.logdata_f144 import ExtractedLogData
 from streaming_data_types.utils import get_schema
 
 from src.aligner import Aligner
 
-
 logger = logging.getLogger(__name__)
 
 
-def handle_f144_data(data):
+def handle_f144_data(data: ExtractedLogData) -> tuple:
+    """
+    Handles deserialization of f144 data schema.
+
+    Args:
+        data (object): The data object to handle.
+
+    Returns:
+        tuple: A tuple containing the source name, the value, and the Unix timestamp in nanoseconds.
+    """
     return data.source_name, data.value, data.timestamp_unix_ns
 
 
-def handle_ev44_data(data):
-    return data.source_name, len(data.time_of_flight), data.reference_time[0] + np.min(data.time_of_flight)
+def handle_ev44_data(data: EventData) -> tuple:
+    """
+    Handles deserialization of ev44 data schema.
+
+    Args:
+        data (object): The data object to handle.
+
+    Returns:
+        tuple: A tuple containing the source name, the count of time_of_flight entries, and the sum of the reference time and minimum time_of_flight.
+    """
+    return (
+        data.source_name,
+        len(data.time_of_flight),
+        data.reference_time[0] + np.min(data.time_of_flight),
+    )
+
 
 # def handle_ev44_data(data):
 #     if len(data.time_of_flight) <= 1:
@@ -41,9 +65,31 @@ SCHEMA_HANDLERS = {
 
 
 class Deserialiser:
+    """
+    A Deserialiser that consumes serialized messages from an input queue, deserializes them,
+    and puts the resulting deserialized messages onto another queue.
+
+    Attributes:
+        SENTINEL (object): A sentinel object used to signal the stopping of the deserializer.
+        input_queue (queue.Queue): The queue from which to consume serialized messages.
+        deserialised_messages_queue (queue.Queue): The queue to put deserialized messages onto.
+        allowed_sources (set, optional): A set of allowed sources to filter messages.
+        _config (dict): Internal configuration dictionary.
+        _source_to_name_map (dict): Mapping from source names to human-readable names.
+        _first_event_data_tracker (dict): Tracks first event data to skip if necessary.
+        running (threading.Event): Event flag to control the running of the deserializer's thread.
+        thread (threading.Thread or None): The thread on which the deserializer runs.
+    """
+
     SENTINEL = object()
 
-    def __init__(self, input_queue: queue.Queue, deserialised_messages_queue: queue.Queue, allowed_sources=None):
+    def __init__(
+        self,
+        input_queue: queue.Queue,
+        deserialised_messages_queue: queue.Queue,
+        allowed_sources=None,
+    ):
+        """Initializes the Deserialiser with input and output queues and optional allowed sources."""
         self.input_queue = input_queue
         self.deserialised_messages_queue = deserialised_messages_queue
         self.allowed_sources = allowed_sources if allowed_sources else set()
@@ -54,7 +100,8 @@ class Deserialiser:
         self.running = threading.Event()
         self.thread = None
 
-    def start(self):
+    def start(self) -> None:
+        """Starts the deserializer thread if it is not already running."""
         if self.thread and self.thread.is_alive():
             logger.info(f"{self.__class__.__name__} already running")
             return
@@ -63,24 +110,35 @@ class Deserialiser:
         self.running.set()
         self.thread.start()
 
-    def stop(self):
+    def stop(self) -> None:
+        """Stops the deserializer thread and clears any state if the thread is running."""
         self.running.clear()
         if self.thread and self.thread.is_alive():
             self.thread.join()
         self.thread = None
         self._first_event_data_tracker = {}
 
-    def notify_of_start(self, config_message):
+    def notify_of_start(self, config_message) -> None:
+        """
+        Notifies the deserializer of a start event, setting up configuration and allowed sources.
+
+        Args:
+            config_message (dict): A dictionary containing configuration data, including allowed sources.
+        """
         self._config = config_message
         self.allowed_sources = [dev["source"] for dev in self._config.values()]
-        self._source_to_name_map = {dev["source"]: name for name, dev in self._config.items()}
+        self._source_to_name_map = {
+            dev["source"]: name for name, dev in self._config.items()
+        }
         if not self.running.is_set():
             self.start()
 
-    def notify_of_stop(self):
+    def notify_of_stop(self) -> None:
+        """Notifies the deserializer to stop, triggering the stopping sequence."""
         self.stop()
 
-    def run(self):
+    def run(self) -> None:
+        """Runs the deserialization process, listening for messages and processing them accordingly."""
         logger.info(f"{self.__class__.__name__} started")
         while self.running.is_set():
             if not self._config or not self._source_to_name_map:
@@ -91,7 +149,9 @@ class Deserialiser:
             except queue.Empty:
                 continue
             if raw_message is self.SENTINEL:
-                logger.info(f"{self.__class__.__name__} received sentinel, sending sentinel to aligner")
+                logger.info(
+                    f"{self.__class__.__name__} received sentinel, sending sentinel to aligner"
+                )
                 self.deserialised_messages_queue.put(Aligner.SENTINEL)
                 self.running.clear()
                 break
@@ -113,11 +173,17 @@ class Deserialiser:
             if deserialiser is None or handler is None:
                 continue
             deserialised_msg = deserialiser(msg)
-            source_name = getattr(deserialised_msg, 'source_name', None)
+            source_name = getattr(deserialised_msg, "source_name", None)
 
-            if source_name and (source_name in self.allowed_sources or not self.allowed_sources):
+            if source_name and (
+                source_name in self.allowed_sources or not self.allowed_sources
+            ):
                 source_name, value, timestamp = handler(deserialised_msg)
                 name = self._source_to_name_map.get(source_name, None)
-                logger.info(f"{self.__class__.__name__} name: {name}, deserialise message: {source_name}, of type {schema}")
-                self.deserialised_messages_queue.put((name, source_name, value, timestamp))
+                logger.info(
+                    f"{self.__class__.__name__} name: {name}, deserialise message: {source_name}, of type {schema}"
+                )
+                self.deserialised_messages_queue.put(
+                    (name, source_name, value, timestamp)
+                )
         logger.info(f"{self.__class__.__name__} stopped")

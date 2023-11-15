@@ -1,4 +1,4 @@
-from confluent_kafka import Producer, KafkaException
+from confluent_kafka import KafkaException, Producer
 
 
 class ProducerFactory:
@@ -7,7 +7,9 @@ class ProducerFactory:
 
     def create_producer(self, broker):
         try:
-            producer = Producer({"bootstrap.servers": broker, "message.max.bytes": 100_000_000})
+            producer = Producer(
+                {"bootstrap.servers": broker, "message.max.bytes": 100_000_000}
+            )
             return producer
         except KafkaException as e:
             print(f"Failed to create producer on broker {broker}")

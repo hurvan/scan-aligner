@@ -11,4 +11,3 @@ class ConsumerFactory:
         except KafkaException as e:
             print(f"Failed to create consumer with config: {config}")
             raise e
-

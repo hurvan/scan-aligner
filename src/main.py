@@ -1,37 +1,44 @@
 import argparse
+import logging
 import queue
 import time
-import logging
 import uuid
 
 import zmq
 
 from src.data_processor import DataProcessor
 from src.factories.consumer_factory import ConsumerFactory
-from src.sasl_utils import add_sasl_commandline_options, generate_kafka_security_config
+from src.sasl_utils import (add_sasl_commandline_options,
+                            generate_kafka_security_config)
 
 logger = logging.getLogger(__name__)
 
 
 def parse_arguments():
-    parser = argparse.ArgumentParser(description='Fill this out later.')
+    parser = argparse.ArgumentParser(description="Fill this out later.")
 
-    parser.add_argument('-b', '--broker',
-                        required=True,
-                        help='The kafka broker to be used.')
+    parser.add_argument(
+        "-b", "--broker", required=True, help="The kafka broker to be used."
+    )
 
-    parser.add_argument('-p', '--push_address',
-                        required=True,
-                        help='The address to push results to.')
+    parser.add_argument(
+        "-p", "--push_address", required=True, help="The address to push results to."
+    )
 
-    parser.add_argument('-u', '--pull_address',
-                        required=True,
-                        help='The address to pull device info from.')
+    parser.add_argument(
+        "-u",
+        "--pull_address",
+        required=True,
+        help="The address to pull device info from.",
+    )
 
-    parser.add_argument('-l', '--log_level',
-                        default="INFO",
-                        choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
-                        help='Set the logging level.')
+    parser.add_argument(
+        "-l",
+        "--log_level",
+        default="INFO",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+        help="Set the logging level.",
+    )
 
     add_sasl_commandline_options(parser)
 
